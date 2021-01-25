@@ -1,1 +1,3 @@
-include 'core', 'applications/DSVImport', 'applications/LoadGenerator'
+rootProject.name = 'core'
+include('core')
+include('applications:DSVImport')
