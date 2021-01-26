@@ -2,6 +2,13 @@
 .gradle/
 gradle/
 
+# Eclipse files
+**.project
+**.settings/
+**.classpath
+
+.vscode/
+
 test.csv
 
  User-specific stuff:
@@ -18,5 +25,6 @@ test.csv
 .idea/dynamic.xml
 .idea/uiDesigner.xml
 
+**bin
 **build
 **.iml
