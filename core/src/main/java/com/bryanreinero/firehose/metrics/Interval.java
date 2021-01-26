@@ -5,7 +5,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Interval implements Delayed, AutoCloseable {
 	
-	private final static Long microSecsPerMil = new Long(1000);
+	private static final Long MICROSECONDSPERMIL =  Long.valueOf(1000L);
 	private final Long start = System.nanoTime();
 	private Long end;
 	private final String name;
@@ -27,7 +27,7 @@ public class Interval implements Delayed, AutoCloseable {
 	}
 	
 	public Long duration(){ 
-		return (end - start)/microSecsPerMil;
+		return (end - start)/MICROSECONDSPERMIL;
 	}
 
 	@Override
