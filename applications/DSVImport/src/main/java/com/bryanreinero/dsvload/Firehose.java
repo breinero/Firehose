@@ -7,7 +7,6 @@ import com.bryanreinero.firehose.metrics.Interval;
 import com.bryanreinero.firehose.metrics.SampleSet;
 import com.bryanreinero.firehose.metrics.Statistics;
 import com.bryanreinero.firehose.util.Application;
-import com.bryanreinero.firehose.util.WorkerPool;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import org.bson.Document;
@@ -22,7 +21,6 @@ public class Firehose {
 	
 	private static final String appName = "Firehose";
 	private final Application app;
-	private final WorkerPool threadPool;
 	private final SampleSet samples;
 	private final Statistics stats;
 	private AtomicInteger linesRead = new AtomicInteger(0);
@@ -38,8 +36,6 @@ public class Firehose {
 	private String filename = null;
 
 	private AtomicBoolean running = new AtomicBoolean( true );
-
-
 
 	private void unitOfWork() {
 
@@ -85,14 +81,9 @@ public class Firehose {
         }
 	}
 
-    public void parseCommandLineArgs( String[] args ) {
-        app.parseCommandLineArgs( args );
-    }
-
-	public Firehose () throws Exception {
+	public Firehose ( String[] args  ) throws Exception {
 
 		app = new Application( appName );
-        threadPool = app.getThreadPool();
         samples = app.getSampleSet();
         stats = new Statistics( samples );
 
@@ -161,7 +152,9 @@ public class Firehose {
         );
         descriptor.setSamples( samples );
         samples.start();
-		app.addPrinable(this);
+        app.addPrinable(this);
+        
+        app.parseCommandLineArgs( args );
     }
 
     public void execute() {
@@ -193,11 +186,8 @@ public class Firehose {
 	}
     
     public static void main( String[] args ) {
-    	
     	try {
-    		Firehose f = new Firehose();
-            f.parseCommandLineArgs( args );
-			f.execute();
+    		new Firehose( args ).execute();
 		} 
 		catch (Exception e) {
 			e.printStackTrace();
