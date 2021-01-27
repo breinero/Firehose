@@ -9,5 +9,16 @@ repositories {
 dependencies {
     implementation project(':core')
     implementation 'org.mongodb:mongo-java-driver:3.4.3'
+}
 
+application {
+    mainClass = 'com.bryanreinero.dsvload.Firehose'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.bryanreinero.dsvload.Firehose'
+        )
+    }
 }
