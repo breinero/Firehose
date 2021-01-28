@@ -11,9 +11,6 @@ import java.util.Map;
 public class CommandLineInterface {
 
 	private Options options = new Options();
-
-	private HelpFormatter formatter = new HelpFormatter();
-	private CommandLineParser parser = new GnuParser();
     private String appName;
 	
 	
@@ -22,7 +19,6 @@ public class CommandLineInterface {
 	public void addCallBack( String key, CallBack cb ) {
 		callbacks.put(key, cb);
 	}
-	
 	
 	public void addOptions( String appName ) throws Exception  {
 		this.appName = appName;
@@ -41,21 +37,19 @@ public class CommandLineInterface {
 		}
 	}
 
-	public void printHelp() {
-		formatter.printHelp(appName, options);
-	}
+	public void parse(String[] args) throws IllegalArgumentException {
 
-	public void parse(String[] args) throws ParseException {
-		CommandLine line = parser.parse(options, args);
+		try {
+			CommandLine line = new GnuParser().parse(options, args);
 
-		for (Option option : line.getOptions())
-			if ( line.hasOption( option.getOpt() ) ) {
-				try {
-					callbacks.get( option.getOpt() ).handle(option.getValues());
-				} catch (Exception e) {
-					throw new IllegalArgumentException("Could not parse opt "+option.getOpt(), e);
-				}
-			}
+			for (Option option : line.getOptions()) 
+				if ( line.hasOption( option.getOpt() ) ) 
+					callbacks.get( option.getOpt() ).handle(option.getValues());					
+			
+		} catch (Exception e) {
+			new HelpFormatter().printHelp(appName, options);
+			throw  new IllegalArgumentException("Failed to parse command line arguments");
+		}
 	}
 
 	public void addOption( Option o ) {

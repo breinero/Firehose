@@ -39,18 +39,16 @@ public class Application {
 		cli.addCallBack(key, cb);
 	}
 
-    public void parseCommandLineArgs ( String[] args ) throws Exception {
+    public void parseCommandLineArgs ( String[] args ) throws IllegalArgumentException {
 
         try {
             cli.addOptions( name );
             cli.parse( args );
             workers = new WorkerPool( numThreads );
-        } catch (ParseException e) {
-            log.severe( "Failed to parse command line arguments" );
-            throw new IllegalStateException( "Command line parsing failed", e );
         } catch (Exception e) {
-            throw new Exception ( "Failed to initialize command line interface", e );
-        }
+            log.severe( "Failed to parse command line arguments" );
+            throw new IllegalArgumentException( "Command line parsing failed", e );
+        } 
     }
 
 	public Application(String name) throws NamingException {
@@ -153,10 +151,5 @@ public class Application {
 
         return config;
     }
-
-    public void printUsage() {
-        cli.printHelp();
-    }
-
 }
 

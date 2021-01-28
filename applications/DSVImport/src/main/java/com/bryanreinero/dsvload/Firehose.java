@@ -154,7 +154,12 @@ public class Firehose {
         samples.start();
         app.addPrinable(this);
         
-        app.parseCommandLineArgs( args );
+        try {
+            app.parseCommandLineArgs( args );
+        } catch ( IllegalArgumentException iae ){
+            System.err.println("Can't initialize Firehose. Reason: "+iae.getLocalizedMessage() );
+            throw new Exception( iae.getLocalizedMessage() );
+        }
     }
 
     public void execute() {
@@ -190,7 +195,7 @@ public class Firehose {
     		new Firehose( args ).execute();
 		} 
 		catch (Exception e) {
-			e.printStackTrace();
+			System.err.println( "Error: "+e.getMessage()+". Exiting Firehose" );
 			System.exit(-1);
 		}
     }
