@@ -7,8 +7,11 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class CommandLineInterface {
+
+	static Logger log = Logger.getLogger( CommandLineInterface.class.getName() );
 
 	private Options options = new Options();
     private String appName;
@@ -37,7 +40,7 @@ public class CommandLineInterface {
 		}
 	}
 
-	public void parse(String[] args) throws IllegalArgumentException {
+	public void parse(String[] args) throws Exception {
 
 		try {
 			CommandLine line = new GnuParser().parse(options, args);
@@ -46,7 +49,16 @@ public class CommandLineInterface {
 				if ( line.hasOption( option.getOpt() ) ) 
 					callbacks.get( option.getOpt() ).handle(option.getValues());					
 			
-		} catch (Exception e) {
+		} catch( MissingArgumentException mae) {
+			log.severe(mae.getMessage());
+			new HelpFormatter().printHelp(appName, options);
+			throw mae;
+		} catch ( ParseException pe ) {
+			log.severe(pe.getMessage());
+			new HelpFormatter().printHelp(appName, options);
+			throw pe;
+		}catch (Exception e) {
+			log.severe(e.getMessage());
 			new HelpFormatter().printHelp(appName, options);
 			throw  new IllegalArgumentException("Failed to parse command line arguments");
 		}
