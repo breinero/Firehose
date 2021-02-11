@@ -1,22 +1,25 @@
 package com.bryanreinero.firehose.dao.faunadb;
-import com.faunadb.client.FaunaClient;
-
-import static com.faunadb.client.query.Language.*;
 
 import com.bryanreinero.firehose.util.Operation;
+import com.bryanreinero.firehose.util.Result;
 import com.faunadb.client.query.Expr;
+import com.faunadb.client.types.Value;
 
 public class FaunaInsert extends Operation {
 
     private final Expr document;
+    private final String collectionName;
 
-    public FaunaInsert(Expr document, FaunaDAO descriptor) {
+    public FaunaInsert(String collectionName, Expr document, FaunaService descriptor) {
         super(descriptor);
         this.document = document;
+        this.collectionName = collectionName;
     }
 
     @Override
-    public Object call() throws Exception {
+    public Result<Value> call() throws Exception {
+        Result res = new Result(false);
+        incAttempts();
         return null;
     }
 }
