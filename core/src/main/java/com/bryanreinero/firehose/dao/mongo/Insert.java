@@ -27,6 +27,7 @@ public class Insert extends Operation {
         incAttempts();
 
          try ( Interval i = descriptor.getSamples().set( getName() ) ) {
+             // descriptor.insertOne(document.getDocument())
             descriptor.getCollection().insertOne( document );
         }
         catch ( MongoWriteException mwe ) {

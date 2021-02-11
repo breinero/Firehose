@@ -16,6 +16,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>com.faunadb</groupId>
+			<artifactId>faunadb-java</artifactId>
+			<version>4.0.1</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongo-java-driver</artifactId>
 			<version>3.0.4</version>
@@ -81,7 +87,7 @@
 			</plugin>
 
 			<plugin>
-				<groupId>org.dstovall</groupId>
+				<groupId>com.jolira</groupId>
 				<artifactId>onejar-maven-plugin</artifactId>
 				<version>1.4.4</version>
 				<executions>
