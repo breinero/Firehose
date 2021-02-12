@@ -45,6 +45,7 @@ public class Firehose {
     private String collectionName;
 
     private boolean isFauna = false;
+    private String faunaKey;
 
 	private Boolean verbose = false;
 	private String filename = null;
@@ -189,6 +190,15 @@ public class Firehose {
                     }
                 });
 
+        // read fauna secret key from command line params
+        app.setCommandLineInterfaceCallback(
+            "k", new CallBack() {
+                    @Override
+                    public void handle(String[] values) {
+                        faunaKey = values[0];
+                    }
+                });
+
         if (!isFauna) {
             client = new MongoClient( new MongoClientURI( dburi ) );
             descriptor = new MongoDAO<>( "insert", "cluster", "taxi.taxilogs" );
@@ -200,7 +210,7 @@ public class Firehose {
             descriptor.setSamples( samples );
         } else {
             FaunaClient faunaClient = FaunaClient.builder()
-                    .withSecret(System.getenv("FAUNA_KEY"))
+                    .withSecret(faunaKey)
                     .build();
             this.faunaDescriptor = new FaunaService("insert", faunaClient);
             this.faunaDescriptor.setSamples(samples);

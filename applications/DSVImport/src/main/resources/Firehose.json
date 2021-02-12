@@ -45,6 +45,13 @@
         "name": "collection",
         "description": "the name of the collection to insert into. Only applies if type='fauna'.",
         "args": 1
+      },
+      {
+        "op": "k",
+        "longOpt": "fauna_key",
+        "name": "fauna_key",
+        "description": "the secret key used for authentication with Fauna. Only applies if type='fauna'.",
+        "args": 1
       }
     ]
   }
