@@ -146,7 +146,7 @@ public class Firehose {
             "s", new CallBack() {
                     @Override
                     public void handle(String[] values) {
-                        if (values[0]=="fauna") {
+                        if ( values[0].compareTo("fauna") == 0 ) {
                             isFauna = true;
                         }
                     }
@@ -212,7 +212,7 @@ public class Firehose {
     public void execute() {
         while ( running.get()  )
             unitOfWork() ;
-
+            
         synchronized (br) {
             if (br != null) try {
                 br.close();
@@ -238,6 +238,7 @@ public class Firehose {
 	}
 
     public static void main( String[] args ) {
+        
     	try {
     		new Firehose( args ).execute();
 		}
@@ -245,5 +246,7 @@ public class Firehose {
 			System.err.println( "Error: "+e.getMessage()+". Exiting Firehose" );
 			System.exit(-1);
 		}
+        
+        System.exit(0);
     }
 }
