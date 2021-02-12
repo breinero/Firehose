@@ -166,13 +166,22 @@ public class Firehose {
         // determine if we're exporting to fauna or mongo. default is mongo
         app.setCommandLineInterfaceCallback(
             "t", new CallBack() {
-                @Override
-                public void handle(String[] values) {
-                    if (values[0]=="fauna") {
-                        isFauna = true;
+                    @Override
+                    public void handle(String[] values) {
+                        if (values[0]=="fauna") {
+                            isFauna = true;
+                        }
                     }
-                }
-        });
+                });
+
+        // read collection name from command line params
+        app.setCommandLineInterfaceCallback(
+            "c", new CallBack() {
+                    @Override
+                    public void handle(String[] values) {
+                        collectionName = values[0];
+                    }
+                });
 
         if (!isFauna) {
             client = new MongoClient( new MongoClientURI( dburi ) );
@@ -188,7 +197,6 @@ public class Firehose {
                     .withSecret(System.getenv("FAUNA_KEY"))
                     .build();
             this.faunaDescriptor = new FaunaService("insert", faunaClient);
-            this.collectionName = "import-collection";
             this.faunaDescriptor.setSamples(samples);
         }
 

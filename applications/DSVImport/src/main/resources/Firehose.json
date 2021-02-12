@@ -38,6 +38,13 @@
         "name": "type",
         "description": "the type of database to import the dsv to. Possible values are 'mongo' and 'fauna'. Default 'mongo'.",
         "args": 1
+      },
+      {
+        "op": "c",
+        "longOpt": "collection",
+        "name": "collection",
+        "description": "the name of the collection to insert into. Only applies if type='fauna'.",
+        "args": 1
       }
     ]
   }
