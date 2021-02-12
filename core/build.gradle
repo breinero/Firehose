@@ -39,6 +39,7 @@ ext.buildDir = './build'
 
 dependencies {
     api "org.mongodb:mongo-java-driver:${javaDriverVersion}"
+    api 'com.faunadb:faunadb-java:4.0.1'
     api "commons-cli:commons-cli:1.2"
     api 'joda-time:joda-time:2.10.9'
     api'com.google.guava:guava:29.0-jre' 

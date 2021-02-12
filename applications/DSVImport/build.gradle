@@ -9,6 +9,7 @@ repositories {
 dependencies {
     implementation project(':core')
     implementation 'org.mongodb:mongo-java-driver:3.4.3'
+    implementation 'com.faunadb:faunadb-java:4.0.1'
 }
 
 application {
