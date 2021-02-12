@@ -1,12 +1,16 @@
 package com.bryanreinero.dsvload;
 
 import com.bryanreinero.firehose.cli.CallBack;
+import com.bryanreinero.firehose.dao.faunadb.FaunaInsert;
+import com.bryanreinero.firehose.dao.faunadb.FaunaService;
 import com.bryanreinero.firehose.dao.mongo.Insert;
 import com.bryanreinero.firehose.dao.mongo.MongoDAO;
 import com.bryanreinero.firehose.metrics.Interval;
 import com.bryanreinero.firehose.metrics.SampleSet;
 import com.bryanreinero.firehose.metrics.Statistics;
 import com.bryanreinero.firehose.util.Application;
+import com.faunadb.client.FaunaClient;
+import com.faunadb.client.query.Expr;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import org.bson.Document;
@@ -16,6 +20,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.faunadb.client.query.Language.Obj;
+import static com.faunadb.client.query.Language.Value;
 
 public class Firehose {
 	
@@ -32,6 +39,11 @@ public class Firehose {
 
     private MongoDAO<Insert> descriptor = null;
 
+    private FaunaService faunaDescriptor;
+    private String collectionName;
+
+    private boolean isFauna = true;
+
 	private Boolean verbose = false;
 	private String filename = null;
 
@@ -42,6 +54,8 @@ public class Firehose {
 		String currentLine = null;
 
 		try ( Interval total = samples.set("total") ) {
+//            Expr document = Obj("name", Value("importing"), "color", Value("blue"));
+//            app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
 
 					// read the next line from source file
 					try (Interval readLine = samples.set("readline")) {
@@ -59,24 +73,29 @@ public class Firehose {
 					else {
                         linesRead.incrementAndGet();
 
-                        Document object = null;
+                        if (!isFauna) {
+                            Document object = null;
 
-                        // Create the DBObject for insertion
-                        try (Interval build = samples.set("build")) {
-                            object = converter.convert(currentLine);
+                            // Create the DBObject for insertion
+                            try (Interval build = samples.set("build")) {
+                                object = converter.convert(currentLine);
+                            }
+
+
+                            String taxi = object.getString( "taxi" );
+                            Integer ts = object.getInteger( "ts" );
+                            Document _id = new Document();
+                            _id.put( "ts", ts );
+                            _id.put( "taxi", taxi );
+                            object.put( "_id", _id );
+
+                            object.remove( "taxi" );
+                            object.remove( "ts" );
+                            app.getThreadPool().submitTask( new Insert( object, descriptor ) );
+                        } else {
+                            Expr document = Obj("name", Value("importing"), "color", Value("blue"));
+                            app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
                         }
-
-
-                        String taxi = object.getString( "taxi" );
-                        Integer ts = object.getInteger( "ts" );
-                        Document _id = new Document();
-                        _id.put( "ts", ts );
-                        _id.put( "taxi", taxi );
-                        object.put( "_id", _id );
-
-                        object.remove( "taxi" );
-                        object.remove( "ts" );
-                       app.getThreadPool().submitTask( new Insert( object, descriptor ) );
                     }
         }
 	}
@@ -143,17 +162,27 @@ public class Firehose {
                 }
         );
 
-        client = new MongoClient( new MongoClientURI( dburi ) );
-        descriptor = new MongoDAO<>( "insert", "cluster", "taxi.taxilogs" );
-        descriptor.setDatabase( client.getDatabase( descriptor.getDatabaseName() ) );
-        descriptor.setCollection(
-                client.getDatabase( descriptor.getDatabaseName() ).getCollection( descriptor.getCollectionName() )
+        if (!isFauna) {
+            client = new MongoClient( new MongoClientURI( dburi ) );
+            descriptor = new MongoDAO<>( "insert", "cluster", "taxi.taxilogs" );
+            descriptor.setDatabase( client.getDatabase( descriptor.getDatabaseName() ) );
+            descriptor.setCollection(
+                    client.getDatabase( descriptor.getDatabaseName() ).getCollection( descriptor.getCollectionName() )
 
-        );
-        descriptor.setSamples( samples );
+            );
+            descriptor.setSamples( samples );
+        } else {
+            FaunaClient faunaClient = FaunaClient.builder()
+                    .withSecret("fnAEB0bU5YACDZeLX1USCv6AruIcyoFQkQ0wr5rY")
+                    .build();
+            this.faunaDescriptor = new FaunaService("insert", faunaClient);
+            this.collectionName = "import-collection";
+            this.faunaDescriptor.setSamples(samples);
+        }
+
         samples.start();
         app.addPrinable(this);
-        
+
         try {
             app.parseCommandLineArgs( args );
         } catch ( IllegalArgumentException iae ){

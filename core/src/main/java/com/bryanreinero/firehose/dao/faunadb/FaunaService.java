@@ -16,7 +16,7 @@ public class FaunaService extends OperationDescriptor {
         this.faunaClient = faunaClient;
     }
 
-    public void addDocument(final String collectionName, final Expr document) throws Exception {
+    public Value addDocument(final String collectionName, final Expr document) throws Exception {
         Value addDocumentResults = faunaClient.query(
                 Create(
                         Collection(Value(collectionName)),
@@ -26,5 +26,7 @@ public class FaunaService extends OperationDescriptor {
                 )
         ).get();
         System.out.println(String.format("Added document to collection %s \n %s \n", collectionName, addDocumentResults));
+        return addDocumentResults;
+
     }
 }

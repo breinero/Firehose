@@ -43,6 +43,7 @@ dependencies {
     api 'joda-time:joda-time:2.10.9'
     api'com.google.guava:guava:29.0-jre' 
     api "org.apache.commons:commons-math3:3.0"
+    api "com.faunadb:faunadb-java:4.0.1"
 
     testImplementation 'junit:junit:4.13' 
 }
