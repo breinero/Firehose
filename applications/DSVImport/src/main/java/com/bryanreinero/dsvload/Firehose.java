@@ -93,6 +93,7 @@ public class Firehose {
                             object.remove( "ts" );
                             app.getThreadPool().submitTask( new Insert( object, descriptor ) );
                         } else {
+                            // create fauna docsj
                             Expr document = Obj("name", Value("importing"), "color", Value("blue"));
                             app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
                         }
@@ -173,7 +174,7 @@ public class Firehose {
             descriptor.setSamples( samples );
         } else {
             FaunaClient faunaClient = FaunaClient.builder()
-                    .withSecret("fnAEB0bU5YACDZeLX1USCv6AruIcyoFQkQ0wr5rY")
+                    .withSecret(System.getenv("FAUNA_KEY"))
                     .build();
             this.faunaDescriptor = new FaunaService("insert", faunaClient);
             this.collectionName = "import-collection";
