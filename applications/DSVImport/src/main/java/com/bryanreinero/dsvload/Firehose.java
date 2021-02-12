@@ -10,7 +10,7 @@ import com.bryanreinero.firehose.metrics.SampleSet;
 import com.bryanreinero.firehose.metrics.Statistics;
 import com.bryanreinero.firehose.util.Application;
 import com.faunadb.client.FaunaClient;
-import com.faunadb.client.query.Expr;
+import com.faunadb.client.types.Value;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import org.bson.Document;
@@ -18,6 +18,8 @@ import org.bson.Document;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -54,11 +56,13 @@ public class Firehose {
 		String currentLine = null;
 
 		try ( Interval total = samples.set("total") ) {
-//            Expr document = Obj("name", Value("importing"), "color", Value("blue"));
+//            Map<String, Value> document = new HashMap();
+//            document.put("id", Value.from(1).get());
+//            document.put("name", Value.from("do I exist?").get());
 //            app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
 
-					// read the next line from source file
-					try (Interval readLine = samples.set("readline")) {
+            // read the next line from source file
+            try (Interval readLine = samples.set("readline")) {
 						synchronized (br) {
 							currentLine = br.readLine();
 						}
@@ -94,7 +98,9 @@ public class Firehose {
                             app.getThreadPool().submitTask( new Insert( object, descriptor ) );
                         } else {
                             // create fauna docsj
-                            Expr document = Obj("name", Value("importing"), "color", Value("blue"));
+                            Map<String, Value> document = new HashMap();
+                            document.put("id", Value.from(1).get());
+                            document.put("name", Value.from("do I exist?").get());
                             app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
                         }
                     }
