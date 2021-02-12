@@ -24,19 +24,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Firehose {
 
-	private static final String appName = "Firehose";
-	private final Application app;
-	private final SampleSet samples;
-	private final Statistics stats;
-	private AtomicInteger linesRead = new AtomicInteger(0);
+    private static final String appName = "Firehose";
+    private final Application app;
+    private final SampleSet samples;
+    private final Statistics stats;
+    private AtomicInteger linesRead = new AtomicInteger(0);
 
     private String delimiter;
     private String[] header;
-	private Converter converter;
+    private Converter converter;
 
-	private BufferedReader br = null;
+    private BufferedReader br = null;
 
-	private String dburi = "mongodb://127.0.0.1:27017/";
+    private String dburi = "mongodb://127.0.0.1:27017/";
     private MongoClient client = null;
 
     private MongoDAO<Insert> descriptor = null;
@@ -47,151 +47,141 @@ public class Firehose {
     private boolean isFauna = false;
     private String faunaKey;
 
-	private Boolean verbose = false;
-	private String filename = null;
+    private Boolean verbose = false;
+    private String filename = null;
 
-	private AtomicBoolean running = new AtomicBoolean( true );
+    private AtomicBoolean running = new AtomicBoolean(true);
 
-	private void unitOfWork() {
+    private void unitOfWork() {
 
-		String currentLine = null;
+        String currentLine = null;
 
-		try ( Interval total = samples.set("total") ) {
+        try (Interval total = samples.set("total")) {
 
             // read the next line from source file
             try (Interval readLine = samples.set("readline")) {
-						synchronized (br) {
-							currentLine = br.readLine();
-						}
-					} catch (IOException e1) {
-                        running.set(false);
-                        e1.printStackTrace();
+                synchronized (br) {
+                    currentLine = br.readLine();
+                }
+            } catch (IOException e1) {
+                running.set(false);
+                e1.printStackTrace();
+            }
+
+            if (currentLine == null)
+                running.set(false);
+            else {
+                linesRead.incrementAndGet();
+
+                if (!isFauna) {
+                    Document object = null;
+
+                    // Create the DBObject for insertion
+                    try (Interval build = samples.set("build")) {
+                        object = (Document) converter.convert(currentLine);
                     }
 
-                    if (currentLine == null)
-						running.set(false);
-
-					else {
-                        linesRead.incrementAndGet();
-
-                        if (!isFauna) {
-                            Document object = null;
-
-                            // Create the DBObject for insertion
-                            try (Interval build = samples.set("build")) {
-                                object = (Document)converter.convert(currentLine);
-                            }
-            
-                            app.getThreadPool().submitTask( new Insert( object, descriptor ) );
-                        } else {
-                            // create fauna docsj
-                            Map<String, Value> document = (Map<String, Value>)converter.convert(currentLine);
-                            app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
-                        }
+                    app.getThreadPool().submitTask(new Insert(object, descriptor));
+                } else {
+                    Map<String, Value> document;
+                    try (Interval build = samples.set("build")) {
+                        document = (Map<String, Value>) converter.convert(currentLine);
                     }
+                    app.getThreadPool()
+                            .submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
+                }
+            }
         }
-	}
+    }
 
-	public Firehose ( String[] args  ) throws Exception {
+    public Firehose(String[] args) throws Exception {
 
-		app = new Application( appName );
+        app = new Application(appName);
         samples = app.getSampleSet();
-        stats = new Statistics( samples );
-
+        stats = new Statistics(samples);
 
         // First step, set up the command line interface
 
-		// custom command line callback fogit statusr delimiter
-        app.setCommandLineInterfaceCallback( "d", new CallBack() {
-			@Override
-			public void handle(String[] values) {
-				delimiter = values[0];
-			}
-		});
-
-		// custom command line callback for delimiter
-        app.setCommandLineInterfaceCallback( "f", new CallBack() {
-			@Override
-			public void handle(String[] values) {
-				filename  = values[0];
-				try {
-					br = new BufferedReader(new FileReader(filename));
-				}catch (Exception e) {
-					e.printStackTrace();
-					System.exit(-1);
-				}
-			}
-		});
-
-        // custom command line callback for delimiter
-        app.setCommandLineInterfaceCallback( "db", new CallBack() {
+        // custom command line callback fogit statusr delimiter
+        app.setCommandLineInterfaceCallback("d", new CallBack() {
             @Override
             public void handle(String[] values) {
-                dburi = values[0] ;
+                delimiter = values[0];
+            }
+        });
+
+        // custom command line callback for delimiter
+        app.setCommandLineInterfaceCallback("f", new CallBack() {
+            @Override
+            public void handle(String[] values) {
+                filename = values[0];
+                try {
+                    br = new BufferedReader(new FileReader(filename));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+            }
+        });
+
+        // custom command line callback for delimiter
+        app.setCommandLineInterfaceCallback("db", new CallBack() {
+            @Override
+            public void handle(String[] values) {
+                dburi = values[0];
             }
         });
 
         // First step, set up the command line interface
-        app.setCommandLineInterfaceCallback(
-                "h", new CallBack() {
-                    @Override
-                    public void handle(String[] values) {
-                        header = values;
-                    }
-                }
-        );
+        app.setCommandLineInterfaceCallback("h", new CallBack() {
+            @Override
+            public void handle(String[] values) {
+                header = values;
+            }
+        });
 
         // determine if we're exporting to fauna or mongo. default is mongo
-        app.setCommandLineInterfaceCallback(
-            "s", new CallBack() {
-                    @Override
-                    public void handle(String[] values) {
-                        if ( values[0].compareTo("fauna") == 0 ) {
-                            isFauna = true;
-                        }
-                    }
-                });
+        app.setCommandLineInterfaceCallback("s", new CallBack() {
+            @Override
+            public void handle(String[] values) {
+                if (values[0].compareTo("fauna") == 0) {
+                    isFauna = true;
+                }
+            }
+        });
 
         // read collection name from command line params
-        app.setCommandLineInterfaceCallback(
-            "c", new CallBack() {
-                    @Override
-                    public void handle(String[] values) {
-                        collectionName = values[0];
-                    }
-                });
+        app.setCommandLineInterfaceCallback("c", new CallBack() {
+            @Override
+            public void handle(String[] values) {
+                collectionName = values[0];
+            }
+        });
 
         // read fauna secret key from command line params
-        app.setCommandLineInterfaceCallback(
-            "k", new CallBack() {
-                    @Override
-                    public void handle(String[] values) {
-                        faunaKey = values[0];
-                    }
-                });
-
-        samples.start();
-        app.addPrinable(this);
+        app.setCommandLineInterfaceCallback("k", new CallBack() {
+            @Override
+            public void handle(String[] values) {
+                faunaKey = values[0];
+            }
+        });
 
         try {
-            app.parseCommandLineArgs( args );
+            app.parseCommandLineArgs(args);
 
-           
             if (!isFauna) {
                 converter = new MongoConverter();
-                client = new MongoClient( new MongoClientURI( dburi ) );
-                descriptor = new MongoDAO<>( "insert", "cluster", "taxi.taxilogs" );
-                descriptor.setDatabase( client.getDatabase( descriptor.getDatabaseName() ) );
+                client = new MongoClient(new MongoClientURI(dburi));
+                descriptor = new MongoDAO<>("insert", "cluster", "taxi.taxilogs");
+                descriptor.setDatabase(client.getDatabase(descriptor.getDatabaseName()));
                 descriptor.setCollection(
-                        client.getDatabase( descriptor.getDatabaseName() ).getCollection( descriptor.getCollectionName() )
-    
+                        client.getDatabase(descriptor.getDatabaseName()).getCollection(descriptor.getCollectionName())
+
                 );
-                descriptor.setSamples( samples );
+                descriptor.setSamples(samples);
             } else {
                 converter = new FaunaConverter();
-                FaunaClient faunaClient = FaunaClient.builder()
-                        .withSecret(faunaKey)
-                        .build();
+                FaunaClient faunaClient = FaunaClient.builder().withSecret(faunaKey).build();
                 this.faunaDescriptor = new FaunaService("insert", faunaClient);
                 this.faunaDescriptor.setSamples(samples);
             }
@@ -199,54 +189,57 @@ public class Firehose {
             converter.setDelimiter(delimiter);
             for (String column : header) {
                 String[] s = column.split(":");
-                converter.addField( s[0], Transformer.getTransformer( s[1] ) );
+                converter.addField(s[0], Transformer.getTransformer(s[1]));
             }
 
+            samples.start();
+            app.addPrinable(this);    
 
-        } catch ( IllegalArgumentException iae ){
-            System.err.println("Can't initialize Firehose. Reason: "+iae.getLocalizedMessage() );
-            throw new Exception( iae.getLocalizedMessage() );
+        } catch (IllegalArgumentException iae) {
+            System.err.println("Can't initialize Firehose. Reason: " + iae.getLocalizedMessage());
+            throw new Exception(iae.getLocalizedMessage());
         }
     }
 
     public void execute() {
-        while ( running.get()  )
-            unitOfWork() ;
-            
+        while (running.get())
+            unitOfWork();
+
+        System.out.println(stats.report() );
         synchronized (br) {
-            if (br != null) try {
-                br.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            if (br != null)
+                try {
+                    br.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
         }
     }
 
-	@Override
-	public String toString() {
-		StringBuffer buf = new StringBuffer("{ ");
-		buf.append("threads: " + app.getNumThreads());
-		buf.append(", \"lines read\": "+ this.linesRead );
-		buf.append(", samples: "+ stats.report() );
+    @Override
+    public String toString() {
+        StringBuffer buf = new StringBuffer("{ ");
+        buf.append("threads: " + app.getNumThreads());
+        buf.append(", \"lines read\": " + this.linesRead);
+        buf.append(", samples: " + stats.report());
 
-		if( verbose ) {
-			buf.append(", converter: "+converter);
-			buf.append(", source: "+filename);
-		}
-		buf.append(" }");
-		return buf.toString();
-	}
+        if (verbose) {
+            buf.append(", converter: " + converter);
+            buf.append(", source: " + filename);
+        }
+        buf.append(" }");
+        return buf.toString();
+    }
 
-    public static void main( String[] args ) {
-        
-    	try {
-    		new Firehose( args ).execute();
-		}
-		catch (Exception e) {
-			System.err.println( "Error: "+e.getMessage()+". Exiting Firehose" );
-			System.exit(-1);
-		}
-        
+    public static void main(String[] args) {
+
+        try {
+            new Firehose(args).execute();
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage() + ". Exiting Firehose");
+            System.exit(-1);
+        }
+
         System.exit(0);
     }
 }
