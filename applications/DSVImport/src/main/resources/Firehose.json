@@ -33,7 +33,7 @@
         "args": 1
       },
       {
-        "op": "t",
+        "op": "s",
         "longOpt": "type",
         "name": "type",
         "description": "the type of database to import the dsv to. Possible values are 'mongo' and 'fauna'. Default 'mongo'.",

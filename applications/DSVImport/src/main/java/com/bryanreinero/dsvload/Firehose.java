@@ -18,13 +18,9 @@ import org.bson.Document;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.faunadb.client.query.Language.Obj;
-import static com.faunadb.client.query.Language.Value;
 
 public class Firehose {
 
@@ -33,7 +29,11 @@ public class Firehose {
 	private final SampleSet samples;
 	private final Statistics stats;
 	private AtomicInteger linesRead = new AtomicInteger(0);
-	private Converter converter = new Converter();
+
+    private String delimiter;
+    private String[] header;
+	private Converter converter;
+
 	private BufferedReader br = null;
 
 	private String dburi = "mongodb://127.0.0.1:27017/";
@@ -57,10 +57,6 @@ public class Firehose {
 		String currentLine = null;
 
 		try ( Interval total = samples.set("total") ) {
-//            Map<String, Value> document = new HashMap();
-//            document.put("id", Value.from(1).get());
-//            document.put("name", Value.from("do I exist?").get());
-//            app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
 
             // read the next line from source file
             try (Interval readLine = samples.set("readline")) {
@@ -83,25 +79,13 @@ public class Firehose {
 
                             // Create the DBObject for insertion
                             try (Interval build = samples.set("build")) {
-                                object = converter.convert(currentLine);
+                                object = (Document)converter.convert(currentLine);
                             }
-
-
-                            String taxi = object.getString( "taxi" );
-                            Integer ts = object.getInteger( "ts" );
-                            Document _id = new Document();
-                            _id.put( "ts", ts );
-                            _id.put( "taxi", taxi );
-                            object.put( "_id", _id );
-
-                            object.remove( "taxi" );
-                            object.remove( "ts" );
+            
                             app.getThreadPool().submitTask( new Insert( object, descriptor ) );
                         } else {
                             // create fauna docsj
-                            Map<String, Value> document = new HashMap();
-                            document.put("id", Value.from(1).get());
-                            document.put("name", Value.from("do I exist?").get());
+                            Map<String, Value> document = (Map<String, Value>)converter.convert(currentLine);
                             app.getThreadPool().submitTask(new FaunaInsert(this.collectionName, document, this.faunaDescriptor));
                         }
                     }
@@ -114,24 +98,14 @@ public class Firehose {
         samples = app.getSampleSet();
         stats = new Statistics( samples );
 
-        // First step, set up the command line interface
-        app.setCommandLineInterfaceCallback(
-                "h", new CallBack() {
-                    @Override
-                    public void handle(String[] values) {
-                        for (String column : values) {
-                            String[] s = column.split(":");
-                            converter.addField( s[0], Transformer.getTransformer( s[1] ) );
-                        }
-                    }
-                }
-        );
 
-		// custom command line callback for delimiter
+        // First step, set up the command line interface
+
+		// custom command line callback fogit statusr delimiter
         app.setCommandLineInterfaceCallback( "d", new CallBack() {
 			@Override
 			public void handle(String[] values) {
-				converter.setDelimiter( values[0] );
+				delimiter = values[0];
 			}
 		});
 
@@ -162,17 +136,14 @@ public class Firehose {
                 "h", new CallBack() {
                     @Override
                     public void handle(String[] values) {
-                        for (String column : values) {
-                            String[] s = column.split(":");
-                            converter.addField( s[0], Transformer.getTransformer( s[1] ) );
-                        }
+                        header = values;
                     }
                 }
         );
 
         // determine if we're exporting to fauna or mongo. default is mongo
         app.setCommandLineInterfaceCallback(
-            "t", new CallBack() {
+            "s", new CallBack() {
                     @Override
                     public void handle(String[] values) {
                         if (values[0]=="fauna") {
@@ -199,28 +170,39 @@ public class Firehose {
                     }
                 });
 
-        if (!isFauna) {
-            client = new MongoClient( new MongoClientURI( dburi ) );
-            descriptor = new MongoDAO<>( "insert", "cluster", "taxi.taxilogs" );
-            descriptor.setDatabase( client.getDatabase( descriptor.getDatabaseName() ) );
-            descriptor.setCollection(
-                    client.getDatabase( descriptor.getDatabaseName() ).getCollection( descriptor.getCollectionName() )
-
-            );
-            descriptor.setSamples( samples );
-        } else {
-            FaunaClient faunaClient = FaunaClient.builder()
-                    .withSecret(faunaKey)
-                    .build();
-            this.faunaDescriptor = new FaunaService("insert", faunaClient);
-            this.faunaDescriptor.setSamples(samples);
-        }
-
         samples.start();
         app.addPrinable(this);
 
         try {
             app.parseCommandLineArgs( args );
+
+           
+            if (!isFauna) {
+                converter = new MongoConverter();
+                client = new MongoClient( new MongoClientURI( dburi ) );
+                descriptor = new MongoDAO<>( "insert", "cluster", "taxi.taxilogs" );
+                descriptor.setDatabase( client.getDatabase( descriptor.getDatabaseName() ) );
+                descriptor.setCollection(
+                        client.getDatabase( descriptor.getDatabaseName() ).getCollection( descriptor.getCollectionName() )
+    
+                );
+                descriptor.setSamples( samples );
+            } else {
+                converter = new FaunaConverter();
+                FaunaClient faunaClient = FaunaClient.builder()
+                        .withSecret(faunaKey)
+                        .build();
+                this.faunaDescriptor = new FaunaService("insert", faunaClient);
+                this.faunaDescriptor.setSamples(samples);
+            }
+
+            converter.setDelimiter(delimiter);
+            for (String column : header) {
+                String[] s = column.split(":");
+                converter.addField( s[0], Transformer.getTransformer( s[1] ) );
+            }
+
+
         } catch ( IllegalArgumentException iae ){
             System.err.println("Can't initialize Firehose. Reason: "+iae.getLocalizedMessage() );
             throw new Exception( iae.getLocalizedMessage() );

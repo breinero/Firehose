@@ -43,7 +43,7 @@ public class FaunaConverter extends Converter<Map<String, Value>> {
         c.addField("geometry.coordinates.$0", Transformer.getTransformer(Transformer.TYPE_STRING));
         c.addField("user.name", Transformer.getTransformer(Transformer.TYPE_STRING));
         c.addField("user.address", Transformer.getTransformer(Transformer.TYPE_STRING));
-        c.addField("_id", Transformer.getTransformer(Transformer.TYPE_STRING));     
+        c.addField("id", Transformer.getTransformer(Transformer.TYPE_STRING));     
     	System.out.println( "Here is the converted object\n" +  c.convert( testString ) );
     }
 }
