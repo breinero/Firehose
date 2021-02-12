@@ -29,7 +29,14 @@
         "op": "db",
         "longOpt": "database",
         "name": "database",
-        "description": "the target datanbase to import the dsv to",
+        "description": "the name of the database to import the dsv to",
+        "args": 1
+      },
+      {
+        "op": "t",
+        "longOpt": "type",
+        "name": "type",
+        "description": "the type of database to import the dsv to. Possible values are 'mongo' and 'fauna'. Default 'mongo'.",
         "args": 1
       }
     ]

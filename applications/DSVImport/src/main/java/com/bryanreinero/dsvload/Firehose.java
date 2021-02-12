@@ -25,7 +25,7 @@ import static com.faunadb.client.query.Language.Obj;
 import static com.faunadb.client.query.Language.Value;
 
 public class Firehose {
-	
+
 	private static final String appName = "Firehose";
 	private final Application app;
 	private final SampleSet samples;
@@ -42,7 +42,7 @@ public class Firehose {
     private FaunaService faunaDescriptor;
     private String collectionName;
 
-    private boolean isFauna = true;
+    private boolean isFauna = false;
 
 	private Boolean verbose = false;
 	private String filename = null;
@@ -133,7 +133,7 @@ public class Firehose {
 			@Override
 			public void handle(String[] values) {
 				filename  = values[0];
-				try { 
+				try {
 					br = new BufferedReader(new FileReader(filename));
 				}catch (Exception e) {
 					e.printStackTrace();
@@ -162,6 +162,17 @@ public class Firehose {
                     }
                 }
         );
+
+        // determine if we're exporting to fauna or mongo. default is mongo
+        app.setCommandLineInterfaceCallback(
+            "t", new CallBack() {
+                @Override
+                public void handle(String[] values) {
+                    if (values[0]=="fauna") {
+                        isFauna = true;
+                    }
+                }
+        });
 
         if (!isFauna) {
             client = new MongoClient( new MongoClientURI( dburi ) );
@@ -204,14 +215,14 @@ public class Firehose {
             }
         }
     }
-	
-	@Override 
+
+	@Override
 	public String toString() {
 		StringBuffer buf = new StringBuffer("{ ");
 		buf.append("threads: " + app.getNumThreads());
 		buf.append(", \"lines read\": "+ this.linesRead );
 		buf.append(", samples: "+ stats.report() );
-		
+
 		if( verbose ) {
 			buf.append(", converter: "+converter);
 			buf.append(", source: "+filename);
@@ -219,11 +230,11 @@ public class Firehose {
 		buf.append(" }");
 		return buf.toString();
 	}
-    
+
     public static void main( String[] args ) {
     	try {
     		new Firehose( args ).execute();
-		} 
+		}
 		catch (Exception e) {
 			System.err.println( "Error: "+e.getMessage()+". Exiting Firehose" );
 			System.exit(-1);
